@@ -18,7 +18,14 @@ func newScanner(img image.Image) *scanner {
 		h:     img.Bounds().Dy(),
 	}
 	if img, ok := img.(*image.Paletted); ok {
-		s.palette = make([]color.NRGBA, len(img.Palette))
+		// Pixel values are uint8 and may reference indexes beyond the end of a
+		// malformed palette, so always allocate 256 entries. Missing entries
+		// stay transparent black.
+		n := len(img.Palette)
+		if n < 256 {
+			n = 256
+		}
+		s.palette = make([]color.NRGBA, n)
 		for i := 0; i < len(img.Palette); i++ {
 			s.palette[i] = color.NRGBAModel.Convert(img.Palette[i]).(color.NRGBA)
 		}

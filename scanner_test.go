@@ -227,3 +227,62 @@ func readColumn(img image.Image, x int) []uint8 {
 	}
 	return column
 }
+
+func TestScannerPalettedIndexOutOfPalette(t *testing.T) {
+	// Paletted image whose pixels reference indexes beyond the palette length.
+	img := image.NewPaletted(image.Rect(0, 0, 3, 2), color.Palette{
+		color.NRGBA{0x10, 0x20, 0x30, 0xff},
+		color.NRGBA{0x40, 0x50, 0x60, 0x80},
+	})
+	img.Pix = []uint8{0, 1, 2, 255, 1, 0}
+
+	s := newScanner(img)
+	dst := make([]uint8, 3*2*4)
+	s.scan(0, 0, 3, 2, dst)
+
+	want := []uint8{
+		0x10, 0x20, 0x30, 0xff, 0x40, 0x50, 0x60, 0x80, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x40, 0x50, 0x60, 0x80, 0x10, 0x20, 0x30, 0xff,
+	}
+	if !compareBytes(dst, want, 0) {
+		t.Fatalf("got %v want %v", dst, want)
+	}
+}
+
+func processAllNoPanic(t *testing.T, img image.Image) {
+	for name, fn := range map[string]func(image.Image) *image.NRGBA{
+		"Grayscale": Grayscale,
+		"Clone":     Clone,
+		"Rotate90":  Rotate90,
+		"Fill":      func(i image.Image) *image.NRGBA { return Fill(i, 50, 40, Center, Lanczos) },
+		"Resize":    func(i image.Image) *image.NRGBA { return Resize(i, 70, 0, Lanczos) },
+		"Crop":      func(i image.Image) *image.NRGBA { return Crop(i, image.Rect(1, 1, 30, 20)) },
+	} {
+		if out := fn(img); out == nil || out.Bounds().Empty() {
+			t.Errorf("%s: unexpected empty result", name)
+		}
+	}
+}
+
+func TestMalformedPalettedTIFF(t *testing.T) {
+	// testdata/cve_2023_36308_poc.tiff is a TIFF whose color map has fewer
+	// entries than the pixel values reference (CVE-2023-36308). Depending on
+	// the golang.org/x/image version, decoding either fails or returns a
+	// paletted image with a short palette; neither may panic.
+	img, err := Open("testdata/cve_2023_36308_poc.tiff")
+	if err != nil {
+		t.Logf("decode rejected the malformed TIFF: %v", err)
+	} else {
+		processAllNoPanic(t, img)
+	}
+
+	// The same malformed image built in memory, independent of the decoder.
+	pal := image.NewPaletted(image.Rect(0, 0, 150, 103), make(color.Palette, 65))
+	for i := range pal.Palette {
+		pal.Palette[i] = color.NRGBA{uint8(i), uint8(i * 2), uint8(i * 3), 0xff}
+	}
+	for i := range pal.Pix {
+		pal.Pix[i] = uint8(i)
+	}
+	processAllNoPanic(t, pal)
+}
