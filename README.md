@@ -5,6 +5,10 @@
 [![Coverage Status](https://coveralls.io/repos/github/disintegration/imaging/badge.svg?branch=master&service=github)](https://coveralls.io/github/disintegration/imaging?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/disintegration/imaging)](https://goreportcard.com/report/github.com/disintegration/imaging)
 
+> This is the StudioSol fork of [disintegration/imaging](https://github.com/disintegration/imaging),
+> based on v1.5.0. It keeps the v1.5.0 image processing results unchanged and
+> fixes the panic on malformed paletted images (CVE-2023-36308).
+
 Package imaging provides basic image processing functions (resize, rotate, crop, brightness/contrast adjustments, etc.).
 
 All the image processing functions provided by the package accept any image type that implements `image.Image` interface
@@ -12,11 +16,11 @@ as an input, and return a new image of `*image.NRGBA` type (32bit RGBA colors, n
 
 ## Installation
 
-    go get -u github.com/disintegration/imaging
+    go get -u github.com/StudioSol/imaging
     
 ## Documentation
 
-http://godoc.org/github.com/disintegration/imaging
+https://pkg.go.dev/github.com/StudioSol/imaging
 
 ## Usage examples
 
@@ -130,7 +134,7 @@ import (
 	"image/color"
 	"log"
 
-	"github.com/disintegration/imaging"
+	"github.com/StudioSol/imaging"
 )
 
 func main() {
